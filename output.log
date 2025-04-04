@@ -1,0 +1,14 @@
+$ bun src/cli/index.ts run tests/sample.md
+MCP Client is ready to use
+Note: This implementation assumes MCP server is already running or will bypass server interaction
+
+== Executing test: Google で検索するテスト ==
+Description: このテストは Google のホームページにアクセスし、検索を実行します。
+
+Generated test script saved to: /Users/kohbanye/git/playwrighty/temp/test-1743787151018.js
+
+Executing test script...
+Executing script directly with Node.js...
+Error executing test: ReferenceError: Cannot access uninitialized variable.
+❌ テストが失敗しました
+error: script "cli" exited with code 1 (SIGHUP)

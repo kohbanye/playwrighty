@@ -1,0 +1,29 @@
+{
+  "name": "playwrighty",
+  "module": "src/index.ts",
+  "type": "module",
+  "bin": {
+    "playwrighty": "src/cli/index.ts"
+  },
+  "scripts": {
+    "start": "bun src/index.ts",
+    "cli": "bun src/cli/index.ts",
+    "dev": "bun --watch src/index.ts",
+    "test": "bun test"
+  },
+  "dependencies": {
+    "@playwright/mcp": "^0.0.9",
+    "commander": "^13.1.0",
+    "dotenv": "^16.4.7",
+    "markdown-it": "^14.1.0",
+    "playwright": "^1.51.1"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.51.1",
+    "@types/markdown-it": "^13.0.7",
+    "bun-types": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^5.0.0"
+  }
+}
