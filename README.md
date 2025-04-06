@@ -1,13 +1,14 @@
 # Playwrighty
 
-A Bun-based CLI tool for running E2E tests written in natural language using Playwright MCP (Model Context Protocol).
+Playwrighty is a CLI tool for running E2E tests written in natural language using Markdown files.
 
 ## Features
 
-- Run E2E tests written in natural language (Japanese) through Markdown files
-- Uses Playwright and MCP for browser automation
-- Simple CLI interface for running tests
-- Supports running tests in headless mode
+- Run E2E tests written in natural language Markdown
+- Analyze natural language test steps and convert them to executable actions
+- Simulate browser interactions with Playwright MCP
+- Flexible test file parsing for different markdown formats
+- Command-line interface for running tests
 
 ## Prerequisites
 
@@ -30,94 +31,61 @@ bunx playwright install
 
 ## Usage
 
-### CLI Commands
+### Running Tests
+
+Run a single test file:
 
 ```bash
-# Run a single test file
-bun cli run tests/sample.md
-
-# Run a single test file in headless mode
-bun cli run tests/sample.md --headless
-
-# Run all tests in a directory
-bun cli run-all tests
-
-# List all available tests
-bun cli list tests
+bun src/cli/index.ts run tests/sample.md
 ```
 
-### Writing E2E Tests in Markdown
+### Options
 
-Tests are written in Markdown format with the following structure:
+- `--headless`: Run tests in headless mode
+- `--slow-mo <ms>`: Slow down operations by specified milliseconds
+
+## Writing Tests
+
+Tests are written in Markdown format with natural language descriptions:
 
 ```markdown
 # Test Title
 
-## テストシナリオ
+This is a description of the test.
 
-Description of the test scenario.
+## Steps
 
-## ステップ
+1. Open the Google homepage
+2. Type "Playwright" in the search box
+3. Click the search button
+4. Wait for the results to appear
 
-1. First step description
-2. Second step description
-3. ...
+## Expected Results
 
-## 期待される結果
-
-- First expected result
-- Second expected result
-- ...
+- Search results page is displayed
+- The results contain the word "Playwright"
 ```
 
-Example:
+Playwrighty supports flexible test descriptions:
 
-```markdown
-# Google で検索するテスト
+- Headings can be in English or Japanese
+- Steps can be numbered, bulleted, or plain text
+- You can add arbitrary sections for organization
 
-## テストシナリオ
+## Advanced Usage
 
-このテストは Google のホームページにアクセスし、検索を実行します。
-
-## ステップ
-
-1. Google のホームページ（https://www.google.com）を開く
-2. 検索ボックスに「Playwright MCP」と入力する
-3. 検索ボタンをクリックする
-4. 検索結果が表示されることを確認する
-
-## 期待される結果
-
-- 検索結果ページが表示される
-- 検索結果に「Playwright」という単語が含まれる
-```
-
-### Programmatic Usage
+### Programmatic API
 
 ```typescript
 import { runTests } from "playwrighty";
 
-// Run a single test
-const results = await runTests("tests/sample.md", { headless: true });
-
-// Run all tests in a directory
-const dirResults = await runTests("tests", {
+const results = await runTests("tests/sample.md", {
   headless: true,
-  isDirectory: true,
+  slowMo: 100,
 });
 
-console.log(`Total: ${dirResults.total}`);
-console.log(`Success: ${dirResults.success}`);
-console.log(`Failed: ${dirResults.failed}`);
+console.log(`Tests passed: ${results.success}/${results.total}`);
 ```
-
-## How It Works
-
-1. The tool parses Markdown test files to extract test scenarios, steps, and expected results
-2. It starts a Playwright MCP server to control the browser
-3. Test steps are analyzed and converted to Playwright commands
-4. The generated Playwright script is executed
-5. Results are reported back to the user
 
 ## License
 

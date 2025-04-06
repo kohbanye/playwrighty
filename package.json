@@ -12,15 +12,16 @@
     "test": "bun test"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.39.0",
+    "@modelcontextprotocol/sdk": "^1.8.0",
     "@playwright/mcp": "^0.0.9",
+    "ai": "^4.3.2",
     "commander": "^13.1.0",
     "dotenv": "^16.4.7",
-    "markdown-it": "^14.1.0",
     "playwright": "^1.51.1"
   },
   "devDependencies": {
     "@playwright/test": "^1.51.1",
-    "@types/markdown-it": "^13.0.7",
     "bun-types": "latest"
   },
   "peerDependencies": {

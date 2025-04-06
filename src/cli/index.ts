@@ -1,177 +1,90 @@
-#!/usr/bin/env bun
-
-import { Command } from "commander";
-import dotenv from "dotenv";
-import fs from "fs";
+import { program } from "commander";
+import fs from "fs/promises";
 import path from "path";
-import { MCPClient } from "../core/mcp-client";
-import { findTestFiles, parseMarkdownTest } from "../utils/markdown-parser";
-
-// Load environment variables
-dotenv.config();
-
-const program = new Command();
+import { RunOptions, runTests } from "../runner/test-runner.js";
 
 program
   .name("playwrighty")
-  .description("CLI tool for running E2E tests written in natural language")
-  .version("0.1.0");
+  .description("Run E2E tests written in natural language using Markdown files")
+  .version("1.0.0");
 
-// Run a single test file
 program
-  .command("run")
-  .description("Run a single E2E test file")
-  .argument("<file>", "Path to the test file (Markdown format)")
-  .option("-h, --headless", "Run in headless mode", false)
-  .action(async (file, options) => {
+  .command("run [testFile]")
+  .description(
+    "Run tests. If no file is specified, runs all tests in tests/ directory"
+  )
+  .option("--headed", "Run tests in headed mode", false)
+  .option(
+    "--slow-mo <ms>",
+    "Slow down operations by specified milliseconds",
+    parseInt
+  )
+  .option(
+    "--max-steps <count>",
+    "Maximum number of steps to execute before ending test",
+    parseInt,
+    30
+  )
+  .action(async (testFile, options) => {
     try {
-      if (!fs.existsSync(file)) {
-        console.error(`Test file not found: ${file}`);
-        process.exit(1);
-      }
+      if (testFile) {
+        // Run a single test file
+        const testFilePath = path.resolve(process.cwd(), testFile);
+        await runSingleTest(testFilePath, options);
+      } else {
+        // Run all markdown files in tests/ directory
+        const testsDir = path.resolve(process.cwd(), "tests");
+        const files = await fs.readdir(testsDir);
+        const mdFiles = files.filter((file) => file.endsWith(".md"));
 
-      // Set headless mode if specified
-      process.env.PLAYWRIGHT_HEADLESS = options.headless ? "true" : "false";
-
-      const client = new MCPClient();
-
-      try {
-        // Start MCP client
-        await client.start();
-
-        // Parse test file
-        const scenario = parseMarkdownTest(file);
-
-        // Execute test
-        const success = await client.executeTest(scenario);
-
-        if (success) {
-          console.log("✅ Test passed!");
-        } else {
-          console.error("❌ Test failed");
+        if (mdFiles.length === 0) {
+          console.log("No test files found in tests/ directory");
           process.exit(1);
         }
-      } catch (error) {
-        console.error(`Error occurred: ${error}`);
-        process.exit(1);
-      } finally {
-        // Stop MCP client
-        await client.stop();
+
+        console.log(`Found ${mdFiles.length} test files`);
+
+        let allPassed = true;
+        for (const file of mdFiles) {
+          const testFilePath = path.join(testsDir, file);
+          const success = await runSingleTest(testFilePath, options);
+          if (!success) allPassed = false;
+          console.log("\n----------------------------\n");
+        }
+
+        process.exit(allPassed ? 0 : 1);
       }
     } catch (error) {
-      console.error(`Error occurred: ${error}`);
+      console.error("Error running test:", error);
       process.exit(1);
     }
   });
 
-// Run all tests in a directory
-program
-  .command("run-all")
-  .description("Run all E2E tests in a directory")
-  .argument("[directory]", "Path to the test directory", "tests")
-  .option("-h, --headless", "Run in headless mode", false)
-  .action(async (directory, options) => {
-    try {
-      const dirPath = path.resolve(process.cwd(), directory);
+async function runSingleTest(
+  testFilePath: string,
+  options: any
+): Promise<boolean> {
+  console.log(`Running test: ${testFilePath}`);
 
-      if (!fs.existsSync(dirPath)) {
-        console.error(`Directory not found: ${dirPath}`);
-        process.exit(1);
-      }
+  const testOptions: RunOptions = {
+    headless: !options.headed,
+    slowMo: options.slowMo,
+    maxSteps: options.maxSteps,
+  };
 
-      // Set headless mode if specified
-      process.env.PLAYWRIGHT_HEADLESS = options.headless ? "true" : "false";
+  const result = await runTests(testFilePath, testOptions);
 
-      const testFiles = findTestFiles(dirPath);
+  console.log(`\nTest Results:`);
+  console.log(`Total steps: ${result.total}`);
+  console.log(`Success: ${result.success ? "Yes" : "No"}`);
 
-      if (testFiles.length === 0) {
-        console.log(`No test files found in: ${dirPath}`);
-        process.exit(0);
-      }
-
-      console.log(`Found ${testFiles.length} test files`);
-
-      const client = new MCPClient();
-      let failedTests = 0;
-
-      try {
-        // Start MCP client
-        await client.start();
-
-        // Execute each test
-        for (const file of testFiles) {
-          console.log(`\nRunning: ${path.basename(file)}`);
-
-          // Parse test file
-          const scenario = parseMarkdownTest(file);
-
-          // Execute test
-          const success = await client.executeTest(scenario);
-
-          if (!success) {
-            failedTests++;
-          }
-        }
-
-        // Print summary
-        console.log("\n=== Test Results ===");
-        console.log(`Total: ${testFiles.length}`);
-        console.log(`Passed: ${testFiles.length - failedTests}`);
-        console.log(`Failed: ${failedTests}`);
-
-        if (failedTests > 0) {
-          process.exit(1);
-        }
-      } catch (error) {
-        console.error(`Error occurred: ${error}`);
-        process.exit(1);
-      } finally {
-        // Stop MCP client
-        await client.stop();
-      }
-    } catch (error) {
-      console.error(`Error occurred: ${error}`);
-      process.exit(1);
-    }
+  console.log("\nStep Results:");
+  result.steps.forEach((step, index) => {
+    const status = step.result.success ? "✓" : "✗";
+    console.log(`Step ${index + 1}: ${status} ${step.action}`);
   });
 
-// List all available tests
-program
-  .command("list")
-  .description("List all available test files")
-  .argument("[directory]", "Path to the test directory", "tests")
-  .action((directory) => {
-    try {
-      const dirPath = path.resolve(process.cwd(), directory);
-
-      if (!fs.existsSync(dirPath)) {
-        console.error(`Directory not found: ${dirPath}`);
-        process.exit(1);
-      }
-
-      const testFiles = findTestFiles(dirPath);
-
-      if (testFiles.length === 0) {
-        console.log(`No test files found in: ${dirPath}`);
-        return;
-      }
-
-      console.log(`=== Available Tests (${testFiles.length}) ===`);
-
-      for (const file of testFiles) {
-        try {
-          const scenario = parseMarkdownTest(file);
-          console.log(`• ${scenario.title} (${path.basename(file)})`);
-          console.log(`  ${scenario.description}`);
-          console.log();
-        } catch (error) {
-          console.log(`• ${path.basename(file)} (parse error)`);
-        }
-      }
-    } catch (error) {
-      console.error(`Error occurred: ${error}`);
-      process.exit(1);
-    }
-  });
+  return result.success;
+}
 
 program.parse(process.argv);
