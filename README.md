@@ -1,6 +1,6 @@
 # Playwrighty
 
-Playwrighty is a CLI tool for running E2E tests written in natural language using Markdown files.
+A bun-based CLI tool for running E2E tests written in natural language using Markdown files.
 
 ## Features
 
@@ -13,7 +13,6 @@ Playwrighty is a CLI tool for running E2E tests written in natural language usin
 ## Prerequisites
 
 - Bun 1.0.0 or higher
-- Node.js 16.0.0 or higher
 
 ## Installation
 
@@ -36,7 +35,7 @@ bunx playwright install
 Run a single test file:
 
 ```bash
-bun src/cli/index.ts run tests/sample.md
+bun src/cli/index.ts run tests/examplecom_sample.md
 ```
 
 ### Options
@@ -49,28 +48,11 @@ bun src/cli/index.ts run tests/sample.md
 Tests are written in Markdown format with natural language descriptions:
 
 ```markdown
-# Test Title
+# Example.com Test
 
-This is a description of the test.
-
-## Steps
-
-1. Open the Google homepage
-2. Type "Playwright" in the search box
-3. Click the search button
-4. Wait for the results to appear
-
-## Expected Results
-
-- Search results page is displayed
-- The results contain the word "Playwright"
+Navigate to https://example.com.
+Expect to see the page title "Example Domain".
 ```
-
-Playwrighty supports flexible test descriptions:
-
-- Headings can be in English or Japanese
-- Steps can be numbered, bulleted, or plain text
-- You can add arbitrary sections for organization
 
 ## Advanced Usage
 
@@ -86,7 +68,3 @@ const results = await runTests("tests/sample.md", {
 
 console.log(`Tests passed: ${results.success}/${results.total}`);
 ```
-
-## License
-
-MIT
