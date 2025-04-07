@@ -22,10 +22,10 @@ export interface TestResult {
   total: number;
 }
 
-export async function runTests(
+export const runTests = async (
   testFilePath: string,
   options: RunOptions = {}
-): Promise<TestResult> {
+): Promise<TestResult> => {
   const testContent = await fs.readFile(testFilePath, "utf-8");
 
   const transport = new Experimental_StdioMCPTransport({
@@ -41,21 +41,17 @@ export async function runTests(
   });
 
   try {
-    return await executeTestLoop(mcpClient, testContent, options);
+    return await executeTest(mcpClient, testContent, options);
   } finally {
     await mcpClient.close();
   }
-}
+};
 
-async function executeTestLoop(
-  mcpClient: ReturnType<typeof experimental_createMCPClient> extends Promise<
-    infer T
-  >
-    ? T
-    : never,
+const executeTest = async (
+  mcpClient: Awaited<ReturnType<typeof experimental_createMCPClient>>,
   testContent: string,
   options: RunOptions = {}
-): Promise<TestResult> {
+): Promise<TestResult> => {
   const initialPrompt = `
 You are an E2E test automation assistant. I will provide you with a test description in Markdown format.
 Your role is as follows:
@@ -100,4 +96,4 @@ When all steps are completed, please explicitly summarize the test results and *
     success: isSuccess,
     total: result.steps.length,
   };
-}
+};

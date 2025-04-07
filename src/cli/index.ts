@@ -31,39 +31,40 @@ program
         // Run a single test file
         const testFilePath = path.resolve(process.cwd(), testFile);
         await runSingleTest(testFilePath, options);
-      } else {
-        // Run all markdown files in tests/ directory
-        const testsDir = path.resolve(process.cwd(), "tests");
-        const files = await fs.readdir(testsDir);
-        const mdFiles = files.filter((file) => file.endsWith(".md"));
-
-        if (mdFiles.length === 0) {
-          console.log("No test files found in tests/ directory");
-          process.exit(1);
-        }
-
-        console.log(`Found ${mdFiles.length} test files`);
-
-        let allPassed = true;
-        for (const file of mdFiles) {
-          const testFilePath = path.join(testsDir, file);
-          const success = await runSingleTest(testFilePath, options);
-          if (!success) allPassed = false;
-          console.log("\n----------------------------\n");
-        }
-
-        process.exit(allPassed ? 0 : 1);
+        return;
       }
+
+      // Run all markdown files in tests/ directory
+      const testsDir = path.resolve(process.cwd(), "tests");
+      const files = await fs.readdir(testsDir);
+      const mdFiles = files.filter((file) => file.endsWith(".md"));
+
+      if (mdFiles.length === 0) {
+        console.log("No test files found in tests/ directory");
+        process.exit(1);
+      }
+
+      console.log(`Found ${mdFiles.length} test files`);
+
+      let allPassed = true;
+      for (const file of mdFiles) {
+        const testFilePath = path.join(testsDir, file);
+        const success = await runSingleTest(testFilePath, options);
+        if (!success) allPassed = false;
+        console.log("\n----------------------------\n");
+      }
+
+      process.exit(allPassed ? 0 : 1);
     } catch (error) {
       console.error("Error running test:", error);
       process.exit(1);
     }
   });
 
-async function runSingleTest(
+const runSingleTest = async (
   testFilePath: string,
   options: any
-): Promise<boolean> {
+): Promise<boolean> => {
   console.log(`Running test: ${testFilePath}`);
 
   const testOptions: RunOptions = {
@@ -79,6 +80,6 @@ async function runSingleTest(
   console.log(`Success: ${result.success ? "Yes" : "No"}`);
 
   return result.success;
-}
+};
 
 program.parse(process.argv);
