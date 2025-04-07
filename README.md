@@ -61,7 +61,7 @@ Expect to see the page title "Example Domain".
 ```typescript
 import { runTests } from "playwrighty";
 
-const results = await runTests("tests/sample.md", {
+const results = await runTests("tests/examplecom_sample.md", {
   headless: true,
   slowMo: 100,
 });
