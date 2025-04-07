@@ -65,7 +65,7 @@ const runSingleTest = async (
   testFilePath: string,
   options: any
 ): Promise<boolean> => {
-  console.log(`Running test: ${testFilePath}`);
+  console.log(`Running test: ${path.basename(testFilePath)}`);
 
   const testOptions: RunOptions = {
     headless: !options.headed,
@@ -74,10 +74,9 @@ const runSingleTest = async (
   };
 
   const result = await runTests(testFilePath, testOptions);
+  console.log(result.success ? "✅ All tests passed" : "❌ Some tests failed");
 
-  console.log(`\nTest Results:`);
-  console.log(`Total steps: ${result.total}`);
-  console.log(`Success: ${result.success ? "Yes" : "No"}`);
+  console.log(result.fullText);
 
   return result.success;
 };

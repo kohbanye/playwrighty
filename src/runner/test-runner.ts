@@ -3,7 +3,7 @@ import { openai } from "@ai-sdk/openai";
 import {
   coreMessageSchema,
   experimental_createMCPClient,
-  generateText,
+  streamText,
 } from "ai";
 import { Experimental_StdioMCPTransport } from "ai/mcp-stdio";
 import dotenv from "dotenv";
@@ -20,6 +20,7 @@ export interface RunOptions {
 export interface TestResult {
   success: boolean;
   total: number;
+  fullText: string;
 }
 
 export const runTests = async (
@@ -52,7 +53,7 @@ const executeTest = async (
   testContent: string,
   options: RunOptions = {}
 ): Promise<TestResult> => {
-  const initialPrompt = `
+  const systemPrompt = `
 You are an E2E test automation assistant. I will provide you with a test description in Markdown format.
 Your role is as follows:
 
@@ -61,26 +62,32 @@ Your role is as follows:
 3. Evaluate the results of each step
 4. Report the overall test results after all steps are completed
 
+Test content written in Markdown format will be provided to you.
+First, please analyze this test and provide an overview of the steps to be executed.
+Then, let's execute the steps one by one.
+For each step, please provide the exact phrase **'test passed'** if the step was successful, or **'test failed'**  if it was not.
+When all steps are completed, please explicitly summarize the test results and provide a exact phrase **'all tests passed'** if all tests passed.
+`;
+
+  const userPrompt = `
 Test content:
 
 ${testContent}
-
-First, please analyze this test and provide an overview of the steps to be executed.
-Then, let's execute the steps one by one.
-When all steps are completed, please explicitly summarize the test results and **include the exact phrase 'test passed' if the test was successful, or 'test failed' if it was not**.
 `;
 
   const messages = [
     coreMessageSchema.parse({
+      role: "system",
+      content: systemPrompt,
+    }),
+    coreMessageSchema.parse({
       role: "user",
-      content: initialPrompt,
+      content: userPrompt,
     }),
   ];
 
-  console.log("Sending message to LLM...");
-
   const tools = await mcpClient.tools();
-  const result = await generateText({
+  const result = streamText({
     model: openai("gpt-4o-mini"),
     messages,
     tools,
@@ -88,12 +95,36 @@ When all steps are completed, please explicitly summarize the test results and *
     maxSteps: options.maxSteps ?? 30,
   });
 
-  console.log(`Assistant: ${result.text}`);
+  const testResults = {
+    fullText: "",
+    stepMarks: "",
+    numSuccess: 0,
+    numFailures: 0,
+  };
 
-  const isSuccess = result.text.toLowerCase().includes("test passed");
+  for await (const chunk of result.textStream) {
+    testResults.fullText += chunk;
+    const numSuccess = testResults.fullText.match(/test passed/g)?.length ?? 0;
+    const numFailures = testResults.fullText.match(/test failed/g)?.length ?? 0;
+
+    if (numSuccess > testResults.numSuccess) {
+      testResults.stepMarks += "🟢";
+      testResults.numSuccess = numSuccess;
+    }
+
+    if (numFailures > testResults.numFailures) {
+      testResults.stepMarks += "🔴";
+      testResults.numFailures = numFailures;
+    }
+
+    process.stdout.write("\r\x1b[K"); // Clear current line
+    process.stdout.write(`Steps: ${testResults.stepMarks}`);
+  }
+  process.stdout.write("\n");
 
   return {
-    success: isSuccess,
-    total: result.steps.length,
+    success: testResults.fullText.toLowerCase().includes("all tests passed"),
+    total: testResults.numSuccess + testResults.numFailures,
+    fullText: testResults.fullText,
   };
 };
