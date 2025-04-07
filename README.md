@@ -18,7 +18,7 @@ A bun-based CLI tool for running E2E tests written in natural language using Mar
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/playwrighty.git
+git clone https://github.com/kohbanye/playwrighty.git
 cd playwrighty
 
 # Install dependencies
