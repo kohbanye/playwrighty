@@ -1,4 +1,5 @@
-import { anthropic } from "@ai-sdk/anthropic";
+// import { anthropic } from "@ai-sdk/anthropic";
+import { openai } from "@ai-sdk/openai";
 import {
   coreMessageSchema,
   experimental_createMCPClient,
@@ -19,11 +20,6 @@ export interface RunOptions {
 export interface TestResult {
   success: boolean;
   total: number;
-  steps: Array<{
-    step: number;
-    action: string;
-    result: any;
-  }>;
 }
 
 export async function runTests(
@@ -60,10 +56,6 @@ async function executeTestLoop(
   testContent: string,
   options: RunOptions = {}
 ): Promise<TestResult> {
-  const stepResults: Array<{ step: number; action: string; result: any }> = [];
-  let currentStep = 0;
-  const maxSteps = options.maxSteps || 30;
-
   const initialPrompt = `
 You are an E2E test automation assistant. I will provide you with a test description in Markdown format.
 Your role is as follows:
@@ -79,73 +71,33 @@ ${testContent}
 
 First, please analyze this test and provide an overview of the steps to be executed.
 Then, let's execute the steps one by one.
+When all steps are completed, please explicitly summarize the test results and **include the exact phrase 'test passed' if the test was successful, or 'test failed' if it was not**.
 `;
 
-  let messages = [
+  const messages = [
     coreMessageSchema.parse({
       role: "user",
       content: initialPrompt,
     }),
   ];
 
-  while (true) {
-    console.log("Sending message to Claude...");
+  console.log("Sending message to LLM...");
 
-    const tools = await mcpClient.tools();
-    const result = await generateText({
-      model: anthropic("claude-3-5-sonnet-latest"),
-      maxTokens: 2000,
-      messages,
-      tools,
-    });
+  const tools = await mcpClient.tools();
+  const result = await generateText({
+    model: openai("gpt-4o-mini"),
+    messages,
+    tools,
+    maxTokens: 2000,
+    maxSteps: options.maxSteps ?? 30,
+  });
 
-    console.log("Received response from Claude");
+  console.log(`Assistant: ${result.text}`);
 
-    console.log(`Assistant: ${result.text}`);
-
-    if (result.text.toLowerCase().includes("test completed")) {
-      break;
-    }
-
-    if (result.text.length > 0) {
-      messages.push(
-        coreMessageSchema.parse({
-          role: "assistant",
-          content: result.text,
-        })
-      );
-    }
-
-    if (result.toolResults.length > 0) {
-      messages.push(
-        coreMessageSchema.parse({
-          role: "tool",
-          content: result.toolResults,
-        })
-      );
-    } else {
-      messages.push(
-        coreMessageSchema.parse({
-          role: "user",
-          content:
-            "If the previous step was successful, please execute the next step. If all steps are completed, please explicitly summarize the test results and ALWAYS include the exact phrase 'test completed' in your response. This phrase is required for the test runner to recognize completion.",
-        })
-      );
-    }
-
-    currentStep++;
-
-    if (currentStep > maxSteps) {
-      console.log(
-        `Maximum step count (${maxSteps}) reached. Ending test execution.`
-      );
-      break;
-    }
-  }
+  const isSuccess = result.text.toLowerCase().includes("test passed");
 
   return {
-    success: stepResults.every((r) => r.result.success),
-    total: stepResults.length,
-    steps: stepResults,
+    success: isSuccess,
+    total: result.steps.length,
   };
 }

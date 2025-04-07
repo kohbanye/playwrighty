@@ -78,12 +78,6 @@ async function runSingleTest(
   console.log(`Total steps: ${result.total}`);
   console.log(`Success: ${result.success ? "Yes" : "No"}`);
 
-  console.log("\nStep Results:");
-  result.steps.forEach((step, index) => {
-    const status = step.result.success ? "✓" : "✗";
-    console.log(`Step ${index + 1}: ${status} ${step.action}`);
-  });
-
   return result.success;
 }
 
